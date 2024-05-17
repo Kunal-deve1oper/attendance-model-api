@@ -1,5 +1,4 @@
-from application import app,db
-from retinaface import RetinaFace
+from application import app,db,detector
 from PIL import Image
 from flask import request,jsonify
 from application import model
@@ -7,6 +6,8 @@ from bson.objectid import ObjectId
 from io import BytesIO
 import json
 import torch
+import requests
+import numpy as np
 
 
 # tested
@@ -43,24 +44,26 @@ def insert_embeddings():
     return jsonify({"msg": "Success"}), 202
 
 
-# not tested
+# tested
 # route to handle the attendance
 @app.route("/image/attendance", methods=["POST"])
 def attendance():
     collection = db["student_img"]
-    json_data = request.form.get('jsonData')
-    userData = {}
-    if json_data:
-        try:
-            json_data_dict = json.loads(json_data)
-            userData = json_data_dict
-        except json.JSONDecodeError:
-            return jsonify({'error': 'Invalid JSON data provided'}), 400
-    response = requests.get(userData['url'])
+    data = request.json
+    if data.get('url') is None:
+        return jsonify({"error": "url not found"}), 400
+    if data.get('classroomId') is None:
+        return jsonify({"error": "classroom id not found"}), 400
+    url = data.get('url')
+    classroomId = data.get('classroomId')
+    response = requests.get(url)
     image = Image.open(BytesIO(response.content))
-    resp = RetinaFace.detect_faces(url)
-    faces = extract_faces(image, resp)
-    res = collection.find({'classroom_id': ObjectId(userData['classroomId'])})
+    img = np.array(image)
+    resp = detector.detect_faces(img)
+    faces = model.extract_faces(image, resp)
+    res = collection.find({'classroom_id': ObjectId(classroomId)})
+    if not res:
+        return jsonify({"error": "Classroom not found"}), 404
     cache_new = []
     for info in faces:
         embedding = model.getEmbeddings(info)
@@ -69,7 +72,7 @@ def attendance():
         cache_new.append(embedding)
     verified = []
     for data in res:
-        embedding = model.reconvert_embeddings(data.get('emmbedding'))
+        embedding = model.reconvert_embeddings(data.get('embedding'))
         items = {
             "studentId": data.get('student_id'),
             "embedding": embedding
@@ -85,8 +88,22 @@ def attendance():
                 temp = distance
                 closest_face = j['studentId']
         if closest_face:
-            present.append(closest_face)
+            present.append(str(closest_face))
+    
+    ans = []
+    for data in verified:
+        if str(data['studentId']) in present:
+            temp = {
+                "studentId": str(data['studentId']),
+                "present": 1
+            }
+            ans.append(temp)
+        else:
+            temp = {
+                "studentId": str(data['studentId']),
+                "present": 0
+            }
+            ans.append(temp)
     
     # will handle the csv
-    
-    return jsonify({"msg": "Success", "data": present})
+    return jsonify({"msg": "Success", "data": ans, "present": present})

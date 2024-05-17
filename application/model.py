@@ -23,22 +23,17 @@ def reconvert_embeddings(embeddings):
     return embeddings_tensor
 
 # function to return extracted faces from group image
-def extract_faces(img, face_data, expansion_factor=1.07):
+def extract_faces(img, face_data):
     faces = []
-    for face_id, face_info in face_data.items():
+    for face_info in face_data:
+        if face_info['confidence'] < .96:
+            continue
         # Extracting face coordinates
-        x1, y1, x2, y2 = map(int, face_info["facial_area"])
-        # Calculating expanded bounding box
-        width = x2 - x1
-        height = y2 - y1
-        expand_width = int(width * expansion_factor)
-        expand_height = int(height * expansion_factor)
-        expanded_x1 = max(0, x1 - (expand_width - width) // 2)
-        expanded_y1 = max(0, y1 - (expand_height - height) // 2)
-        expanded_x2 = min(img.width, x2 + (expand_width - width) // 2)
-        expanded_y2 = min(img.height, y2 + (expand_height - height) // 2)
-        # Cropping the expanded face region
-        face_img = img.crop((expanded_x1, expanded_y1, expanded_x2, expanded_y2))
+        x1, y1, w, h = map(int, face_info['box'])
+        x2 = x1 + w
+        y2 = y1 + h
+        # Cropping the face region
+        face_img = img.crop((x1, y1, x2, y2))
         # Append cropped face image to list
         faces.append(face_img)
     return faces
