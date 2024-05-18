@@ -5,6 +5,7 @@ from application import model
 from bson.objectid import ObjectId
 from io import BytesIO
 import json
+import base64
 import torch
 import requests
 import numpy as np
@@ -66,44 +67,59 @@ def attendance():
         return jsonify({"error": "Classroom not found"}), 404
     cache_new = []
     for info in faces:
-        embedding = model.getEmbeddings(info)
+        embedding = model.getEmbeddings(info['face_img'])
         if embedding is None:
             continue
-        cache_new.append(embedding)
+        cache_new.append({"embedding":embedding,"box":info['box']})
     verified = []
     for data in res:
         embedding = model.reconvert_embeddings(data.get('embedding'))
         items = {
             "studentId": data.get('student_id'),
+            "name": data.get('name'),
             "embedding": embedding
         }
         verified.append(items)
     present = []
+    boxing = []
     for i in cache_new:
         temp = 5
         closest_face = None
         for j in verified:
-            distance = (i - j['embedding']).norm().item()
+            distance = (i['embedding'] - j['embedding']).norm().item()
             if distance < temp:
                 temp = distance
                 closest_face = j['studentId']
+                name = j['name']
         if closest_face:
             present.append(str(closest_face))
+            boxing.append({"name":name,"box":i['box']})
     
     ans = []
     for data in verified:
         if str(data['studentId']) in present:
             temp = {
                 "studentId": str(data['studentId']),
+                "name": data['name'],
                 "present": 1
             }
             ans.append(temp)
         else:
             temp = {
                 "studentId": str(data['studentId']),
+                "name": data['name'],
                 "present": 0
             }
             ans.append(temp)
     
-    # will handle the csv
-    return jsonify({"msg": "Success", "data": ans, "present": present})
+    model.draw_box(image,boxing)
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
+    
+    # Return the JSON response with the image included
+    return jsonify({
+        "msg": "Success",
+        "data": ans,
+        "image": img_str
+    }), 200

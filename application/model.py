@@ -1,5 +1,6 @@
 from facenet_pytorch import MTCNN,InceptionResnetV1
 import torch
+from PIL import ImageDraw,ImageFont
 
 resnet = InceptionResnetV1(pretrained='casia-webface').eval()
 
@@ -35,5 +36,22 @@ def extract_faces(img, face_data):
         # Cropping the face region
         face_img = img.crop((x1, y1, x2, y2))
         # Append cropped face image to list
-        faces.append(face_img)
+        faces.append({"face_img":face_img,"box":face_info['box']})
     return faces
+
+def draw_box(img,data):
+    draw = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype("arial.ttf", size=35)
+    except IOError:
+        font = ImageFont.load_default()
+
+    for info in data:
+        x, y, width, height = info['box']
+        text = info['name']
+        draw.rectangle([x, y, x + width, y + height], outline='green', width=2)
+        text_bbox = draw.textbbox((x, y), text, font=font)
+        text_width = text_bbox[2] - text_bbox[0]
+        text_height = text_bbox[3] - text_bbox[1]
+        draw.rectangle([x, y - text_height - 2, x + text_width, y], fill='green')
+        draw.text((x, y - text_height - 2), text, fill='white', font=font)
