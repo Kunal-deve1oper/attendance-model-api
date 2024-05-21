@@ -1,6 +1,7 @@
 from facenet_pytorch import MTCNN,InceptionResnetV1
 import torch
-from PIL import ImageDraw,ImageFont
+from PIL import ImageDraw,ImageFont,Image
+from io import BytesIO
 
 resnet = InceptionResnetV1(pretrained='casia-webface').eval()
 
@@ -23,20 +24,21 @@ def reconvert_embeddings(embeddings):
     embeddings_tensor = torch.tensor(embeddings, dtype=torch.float32).unsqueeze(0)
     return embeddings_tensor
 
-# function to return extracted faces from group image
 def extract_faces(img, face_data):
     faces = []
     for face_info in face_data:
         if face_info['confidence'] < .96:
             continue
-        # Extracting face coordinates
         x1, y1, w, h = map(int, face_info['box'])
         x2 = x1 + w
         y2 = y1 + h
-        # Cropping the face region
         face_img = img.crop((x1, y1, x2, y2))
-        # Append cropped face image to list
-        faces.append({"face_img":face_img,"box":face_info['box']})
+        byte_stream = BytesIO()
+        face_img.save(byte_stream, format='JPEG')
+        byte_stream.seek(0)
+        loaded_img = Image.open(byte_stream)
+        faces.append({"face_img": loaded_img, "box": face_info['box']})
+        
     return faces
 
 def draw_box(img,data):

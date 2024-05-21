@@ -9,6 +9,7 @@ import base64
 import torch
 import requests
 import numpy as np
+from datetime import datetime
 
 
 # tested
@@ -36,6 +37,7 @@ def insert_embeddings():
     data = {
         "classroom_id": ObjectId(userData['classroomId']),
         "student_id": ObjectId(userData['studentId']),
+        "name": userData['name'],
         "embedding": embeddings_list
     }
     try:
@@ -120,6 +122,7 @@ def attendance():
     # Return the JSON response with the image included
     return jsonify({
         "msg": "Success",
+        "date": datetime.now().date(),
         "data": ans,
         "image": img_str
     }), 200
