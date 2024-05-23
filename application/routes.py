@@ -16,7 +16,7 @@ from datetime import datetime
 # route to handle the student image upload
 @app.route("/image/individual",methods=["POST"])
 def insert_embeddings():
-    collection = db["student_img"]
+    collection = db["student_imgs"]
     file = request.files['image']
     if not file:
         return jsonify({'error': 'No image provided'}), 400
@@ -51,7 +51,7 @@ def insert_embeddings():
 # route to handle the attendance
 @app.route("/image/attendance", methods=["POST"])
 def attendance():
-    collection = db["student_img"]
+    collection = db["student_imgs"]
     data = request.json
     if data.get('url') is None:
         return jsonify({"error": "url not found"}), 400
