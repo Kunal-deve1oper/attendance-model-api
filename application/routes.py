@@ -35,7 +35,7 @@ def insert_embeddings():
         return jsonify({'error': 'Upload a good image'}), 400
     embeddings_list = embeddings.squeeze().tolist()
     data = {
-        "classroom_id": ObjectId(userData['classroomId']),
+        "classroom_id": userData['classroomId'],
         "student_id": ObjectId(userData['studentId']),
         "name": userData['name'],
         "embedding": embeddings_list
@@ -64,7 +64,7 @@ def attendance():
     img = np.array(image)
     resp = detector.detect_faces(img)
     faces = model.extract_faces(image, resp)
-    res = collection.find({'classroom_id': ObjectId(classroomId)})
+    res = collection.find({'classroom_id': classroomId})
     if not res:
         return jsonify({"error": "Classroom not found"}), 404
     cache_new = []
