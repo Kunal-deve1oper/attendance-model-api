@@ -16,7 +16,7 @@ from datetime import datetime
 # route to handle the student image upload
 @app.route("/image/individual",methods=["POST"])
 def insert_embeddings():
-    collection = db["student_imgs"]
+    collection = db["embeddings"]
     file = request.files['image']
     if not file:
         return jsonify({'error': 'No image provided'}), 400
@@ -34,16 +34,24 @@ def insert_embeddings():
     if embeddings is None :
         return jsonify({'error': 'Upload a good image'}), 400
     embeddings_list = embeddings.squeeze().tolist()
-    data = {
-        "classroom_id": userData['classroomId'],
-        "student_id": ObjectId(userData['studentId']),
-        "name": userData['name'],
-        "embedding": embeddings_list
-    }
-    try:
-        res = collection.insert_one(data)
-    except Exception as e:
-        return jsonify({'error': e})
+    temp = collection.find_one({"student_id": userData['studentId']})
+    if temp:
+        if userData['classroomId'] in temp['code']:
+            return jsonify({"msg": "Already enrolled"}), 409
+        result = collection.update_one({"_id": temp['_id']},{'$push':{'code':userData['classroomId']}})
+    else:
+        data = {
+            "code": [userData['classroomId']],
+            "student_id": userData['studentId'],
+            "name": userData['name'],
+            "embedding": embeddings_list
+        }
+        try:
+            res = collection.insert_one(data)
+            student = db['students']
+            student.update_one({"_id": ObjectId(userData['studentId'])},{'$set':{'embeddings_id': str(res.inserted_id)}})
+        except Exception as e:
+            return jsonify({'error': e})
     return jsonify({"msg": "Success"}), 202
 
 
