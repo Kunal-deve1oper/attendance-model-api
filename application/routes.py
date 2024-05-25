@@ -59,7 +59,7 @@ def insert_embeddings():
 # route to handle the attendance
 @app.route("/image/attendance", methods=["POST"])
 def attendance():
-    collection = db["student_imgs"]
+    collection = db["embeddings"]
     data = request.json
     if data.get('url') is None:
         return jsonify({"error": "url not found"}), 400
@@ -72,7 +72,7 @@ def attendance():
     img = np.array(image)
     resp = detector.detect_faces(img)
     faces = model.extract_faces(image, resp)
-    res = collection.find({'classroom_id': classroomId})
+    res = collection.find({'code': classroomId})
     if not res:
         return jsonify({"error": "Classroom not found"}), 404
     cache_new = []
