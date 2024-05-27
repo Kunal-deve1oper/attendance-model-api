@@ -52,9 +52,10 @@ def insert_embeddings():
             student.update_one({"_id": ObjectId(userData['studentId'])},{'$set':{'embeddings_id': str(res.inserted_id)}})
         except Exception as e:
             return jsonify({'error': e})
-    return jsonify({"msg": "Success"}), 202
+    return jsonify({"msg": "Success","embeddingId": str(res.inserted_id)}), 202
 
 
+# route to handle enrolling of a student whose embeddings is already present
 @app.route("/enroll",methods=["POST"])
 def add_code():
     collection = db["embeddings"]
