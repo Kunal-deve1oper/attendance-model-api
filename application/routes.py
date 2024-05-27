@@ -51,7 +51,7 @@ def insert_embeddings():
             student = db['students']
             student.update_one({"_id": ObjectId(userData['studentId'])},{'$set':{'embeddings_id': str(res.inserted_id)}})
         except Exception as e:
-            return jsonify({'error': e})
+            return jsonify({'error': e}), 500
     return jsonify({"msg": "Success","embeddingId": str(res.inserted_id)}), 202
 
 
@@ -62,16 +62,17 @@ def add_code():
     data = request.json
     if data.get('classroomId') is None:
         return jsonify({"error": "classroom id not found"}), 400
-    if data.get('StudentId') is None:
+    if data.get('studentId') is None:
         return jsonify({"error": "student id not found"}), 400
     temp = collection.find_one({"student_id": data.get('studentId')})
     if temp:
-        if userData['classroomId'] in temp['code']:
+        if data.get('classroomId') in temp['code']:
             return jsonify({"msg": "Already enrolled"}), 409
         result = collection.update_one({"_id": temp['_id']},{'$push':{'code': data.get("classroomId")}})
     else:
         return jsonify({"msg": "Enter Correct student id"}), 400
     return jsonify({"msg": "Success"}), 202
+
 
 # tested
 # route to handle the attendance
@@ -140,6 +141,17 @@ def attendance():
             }
             ans.append(temp)
     
+    cumulative = db['cumulatives']
+    cumulative_attendance = {
+        "classroomId": classroomId,
+        "date": datetime.now(),
+        "attendance": ans
+    }
+    try:
+        res = cumulative.insert_one(cumulative_attendance)
+    except Exception as e:
+        return jsonify({"msg": e}), 500
+
     model.draw_box(image,boxing)
     buffered = BytesIO()
     image.save(buffered, format="PNG")
