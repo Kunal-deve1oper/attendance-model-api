@@ -55,6 +55,23 @@ def insert_embeddings():
     return jsonify({"msg": "Success"}), 202
 
 
+@app.route("/enroll",methods=["POST"])
+def add_code():
+    collection = db["embeddings"]
+    data = request.json
+    if data.get('classroomId') is None:
+        return jsonify({"error": "classroom id not found"}), 400
+    if data.get('StudentId') is None:
+        return jsonify({"error": "student id not found"}), 400
+    temp = collection.find_one({"student_id": data.get('studentId')})
+    if temp:
+        if userData['classroomId'] in temp['code']:
+            return jsonify({"msg": "Already enrolled"}), 409
+        result = collection.update_one({"_id": temp['_id']},{'$push':{'code': data.get("classroomId")}})
+    else:
+        return jsonify({"msg": "Enter Correct student id"}), 400
+    return jsonify({"msg": "Success"}), 202
+
 # tested
 # route to handle the attendance
 @app.route("/image/attendance", methods=["POST"])
