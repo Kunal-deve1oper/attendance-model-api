@@ -10,7 +10,7 @@ mtcnn = MTCNN()
 # function to generate embeddings
 def getEmbeddings(image_data):
     w, h = image_data.size
-    if w < 60 or h < 60:
+    if w < 30 or h < 30:
         return None
     aligned = mtcnn(image_data)
     if aligned is None:
